@@ -24,9 +24,9 @@ namespace TestLeanplumSDK
         public MainWindow()
         {
             InitializeComponent();
-
-            leanplum.SetAppIdForProductionMode("Your App ID key", "Your Production key");
             leanplum = new Leanplum_ABTesting("1.0.6");
+            leanplum.SetAppIdForProductionMode("Your App ID key", "Your Production key");
+            
         }
 
         private void LoginButton_Click(object sender, RoutedEventArgs e)
