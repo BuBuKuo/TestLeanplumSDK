@@ -8,18 +8,69 @@ using TestLeanplumSDK.HTTP;
 using System.Web.Script.Serialization;
 using System.Reflection;
 
-
+using System.Collections;
 namespace TestLeanplumSDK.Leanplum
 {
+    class TrackData
+    {
+        private string _trackEvent;
+        private Dictionary<string, object> _optionalArguments = null;
+
+        public TrackData(string trackEvent) 
+        {
+            _trackEvent = trackEvent;
+        }
+
+        public string GetTrackEvent()
+        {
+            return _trackEvent;
+        }
+
+        public Dictionary<string, object> GetOptionalArguments() 
+        {
+            return _optionalArguments;
+        }
+
+        public void SetOptionalArg(string arg, object value )
+        {
+            _optionalArguments = new Dictionary<string,object>();
+            _optionalArguments.Add(arg,value);
+        }
+
+        public void ChangeOptionalArg(string arg, object value) 
+        {
+            if (_optionalArguments == null) 
+            {
+                // Error message
+                return;
+            }
+            _optionalArguments[arg] = value;
+        }
+    }
+
     class Leanplum_ABTesting
     {
+        private static readonly Leanplum_ABTesting _instance = new Leanplum_ABTesting();
         private HTTPMethod _HTTPMethod;
         private String _KeyKapId, _KeyProduction, _ApiVersion, _UserId;
+        private bool _isLogin = false;
 
-        public Leanplum_ABTesting(String apiVersion)
+        public static Leanplum_ABTesting Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+
+        public Leanplum_ABTesting() 
         {
             _HTTPMethod = new HTTPMethod();
             _HTTPMethod.APIPath = "https://www.leanplum.com/api?";
+        }
+
+        public void SetApiVersion(String apiVersion)
+        {
             _ApiVersion = "apiVersion=" + apiVersion;
         }
 
@@ -33,10 +84,11 @@ namespace TestLeanplumSDK.Leanplum
         {
             _UserId = "userId=" + userId;
         }
-       
-        public object Start(Dictionary<string, object> optionalArguments = null)
+
+        public Dictionary<string, object> Start(Dictionary<string, object> optionalArguments = null)
         {
             string address = _KeyKapId + "&" + _KeyProduction + "&" + _ApiVersion + "&action=start" + "&" + _UserId;
+            
             JavaScriptSerializer serializer = new JavaScriptSerializer();
             string responseStr;
 
@@ -55,6 +107,7 @@ namespace TestLeanplumSDK.Leanplum
             {
                 // Query failed
             }
+            _isLogin = true;
             return response.response[0].vars;
         }
 
@@ -65,26 +118,33 @@ namespace TestLeanplumSDK.Leanplum
 
         public class ResponseData
         {
-            public object vars { get; set; }
+            public Dictionary<string, object> vars { get; set; }
             public bool success { get; set; }
         }
 
-        public void Track(string trackEvent, Dictionary<string, object> optionalArguments = null) 
+        public void Track(TrackData trackData)
         {
-            String address = _KeyKapId + "&" + _KeyProduction + "&" + _ApiVersion + "&action=track" + "&" + _UserId + "&event=" + trackEvent;
-            if (optionalArguments == null)
+            if (_isLogin) 
+            {
+                // Error
+                return;
+            }
+            String address = _KeyKapId + "&" + _KeyProduction + "&" + _ApiVersion + "&action=track" + "&" + _UserId + "&event=" + trackData.GetTrackEvent();
+            
+            if (trackData.GetOptionalArguments() == null)
             {
                 _HTTPMethod.HttpGet(address);
             }
             else
             {
-                _HTTPMethod.HttpPost(address, optionalArguments);
+                _HTTPMethod.HttpPost(address, trackData.GetOptionalArguments());
             }
         }
 
         public void Stop()
         {
             string h = _HTTPMethod.HttpGet(_KeyKapId + "&" + _KeyProduction + "&" + _ApiVersion + "&action=stop" + "&" + _UserId);
+            _isLogin = false;
         }
     }
 }
